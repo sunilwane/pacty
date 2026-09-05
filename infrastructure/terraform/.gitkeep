@@ -1,0 +1,2 @@
+# Terraform configuration placeholder
+# Add modules for managed PostgreSQL, Redis, and container deployment

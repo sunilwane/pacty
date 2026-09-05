@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum PredictionStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  RESOLVED
+  CANCELLED
+}
+
+enum PredictionVisibility {
+  PUBLIC
+  PRIVATE
+  GROUP
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String   @map("password_hash")
+  walletAddress String?  @unique @map("wallet_address")
+  role          UserRole @default(USER)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  predictions   Prediction[]      @relation("PredictionCreator")
+  groupMembers  GroupMember[]
+  bets          Bet[]
+  comments      Comment[]
+  notifications Notification[]
+  wallets       Wallet[]
+
+  @@map("users")
+}
+
+model Group {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  creatorId   String   @map("creator_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members     GroupMember[]
+  predictions Prediction[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id        String   @id @default(uuid())
+  groupId   String   @map("group_id")
+  userId    String   @map("user_id")
+  role      String   @default("MEMBER")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+model Prediction {
+  id                   String               @id @default(uuid())
+  question             String
+  description          String?
+  imageUrl             String?              @map("image_url")
+  creatorId            String               @map("creator_id")
+  groupId              String?              @map("group_id")
+  status               PredictionStatus     @default(DRAFT)
+  visibility           PredictionVisibility @default(PUBLIC)
+  contractPredictionId String?              @unique @map("contract_prediction_id")
+  deadline             DateTime
+  winningOptionId      String?              @map("winning_option_id")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  creator User              @relation("PredictionCreator", fields: [creatorId], references: [id])
+  group   Group?            @relation(fields: [groupId], references: [id])
+  options PredictionOption[]
+  bets    Bet[]
+  comments Comment[]
+
+  @@map("predictions")
+}
+
+model PredictionOption {
+  id           String @id @default(uuid())
+  predictionId String @map("prediction_id")
+  label        String
+  sortOrder    Int    @default(0) @map("sort_order")
+
+  prediction Prediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  bets       Bet[]
+
+  @@map("prediction_options")
+}
+
+model Bet {
+  id              String   @id @default(uuid())
+  predictionId    String   @map("prediction_id")
+  optionId        String   @map("option_id")
+  userId          String   @map("user_id")
+  amount          Decimal  @db.Decimal(36, 18)
+  txHash          String?  @unique @map("tx_hash")
+  contractBetId   String?  @map("contract_bet_id")
+  claimed         Boolean  @default(false)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  prediction Prediction       @relation(fields: [predictionId], references: [id])
+  option     PredictionOption @relation(fields: [optionId], references: [id])
+  user       User             @relation(fields: [userId], references: [id])
+
+  @@map("bets")
+}
+
+model Comment {
+  id           String   @id @default(uuid())
+  predictionId String   @map("prediction_id")
+  userId       String   @map("user_id")
+  content      String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  prediction Prediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@map("comments")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  address   String   @unique
+  chainId   Int      @map("chain_id")
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}
+
+model Transaction {
+  id           String   @id @default(uuid())
+  txHash       String   @unique @map("tx_hash")
+  blockNumber  BigInt   @map("block_number")
+  eventName    String   @map("event_name")
+  payload      Json
+  processed    Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("transactions")
+}

@@ -1,0 +1,18 @@
+FROM oven/bun:1.1-alpine AS base
+WORKDIR /app
+
+FROM base AS deps
+COPY package.json pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/config/package.json ./packages/config/
+COPY packages/database/package.json ./packages/database/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/validation/package.json ./packages/validation/
+RUN bun install -g pnpm && pnpm install --frozen-lockfile || pnpm install
+
+FROM base AS runner
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+WORKDIR /app/apps/api
+EXPOSE 4000
+CMD ["bun", "run", "src/server.ts"]

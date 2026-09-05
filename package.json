@@ -1,0 +1,25 @@
+{
+  "name": "pactly",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pactly — prediction markets with Web2 UX and Web3 settlement",
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "dev:web": "pnpm --filter @pactly/web dev",
+    "dev:api": "pnpm --filter @pactly/api dev",
+    "dev:worker": "pnpm --filter @pactly/worker dev",
+    "build": "pnpm run --recursive build",
+    "lint": "pnpm run --recursive lint",
+    "typecheck": "pnpm run --recursive typecheck",
+    "db:generate": "pnpm --filter @pactly/database generate",
+    "db:migrate": "pnpm --filter @pactly/database migrate",
+    "db:studio": "pnpm --filter @pactly/database studio",
+    "contracts:build": "pnpm --filter @pactly/contracts build",
+    "contracts:test": "pnpm --filter @pactly/contracts test"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
